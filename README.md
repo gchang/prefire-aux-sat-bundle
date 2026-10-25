@@ -30,12 +30,25 @@ source bundle_env.sh    # from the bundle root; sets PYTHONPATH to the three sib
 Python 3.10 from conda-forge with the packages in `PREFIRE_AUX_SAT/README.md`, plus git (to record the code versions in the product). Two things matter when you build the environment:
 
 - **numpy must be below 2.** The code was written against numpy 1.26 (see `PREFIRE_AUX_SAT/conda_env.list`). With numpy 2 the final surface type step stops at `classify_sfc_type_final.py:297` (`OverflowError: Python integer -9999 out of bounds for int8`).
-- **Use the no-MPI build of ESMF and leave out mpi4py.** One orbit runs on one core and nothing on the run path imports mpi4py. The unpinned list with mpi4py kept the conda solver busy for about 3 hours without an answer. `environment.yml` at the bundle root holds the list that solves (conda-forge only, with these pins). The solve itself takes 22 to 25 minutes on a 16-core Linux machine; the `timeout` stops a stuck solve after an hour.
+- **Use the no-MPI build of ESMF and leave out mpi4py.** One orbit runs on one core and nothing on the run path imports mpi4py. The unpinned list with mpi4py kept the conda solver busy for about 3 hours without an answer.
+
+On Linux x86-64, install the exact environment the check used from the lock file at the bundle root. It lists every package (116, all from conda-forge, each with its checksum), so conda downloads them without solving; it took 14 seconds with an empty package cache on 2026-10-25:
+
+```sh
+conda create -n prefire_aux_sat --file conda-linux-64.lock
+conda activate prefire_aux_sat
+```
+
+The lock gives python 3.10.22, numpy 1.26.4, esmf and esmpy 8.9.1 (nompi), netcdf4 1.7.4 (nompi), h5py 3.16.0, pyhdf 0.11.7, scipy 1.15.2 and cartopy 0.25.0.
+
+The slow alternative, for another platform or to pick up newer builds, is `environment.yml`, the readable list the lock was made from (conda-forge only, with the two pins above). Solving it took 22 to 41 minutes on a 16-core Linux machine; the `timeout` stops a stuck solve after an hour:
 
 ```sh
 timeout 3600 conda env create -f environment.yml
 conda activate prefire_aux_sat
 ```
+
+To refresh the lock after such a solve: `conda list --explicit --md5 -n prefire_aux_sat > conda-linux-64.lock`.
 
 Memory: **at least 12 GB.** Each VIIRS step builds a search tree of the whole global 0.05-degree grid and peaks at about 8.5 GB. If the process is killed for lack of memory there is no error message and `run.sh` still exits 0 (see "Checking that it worked").
 

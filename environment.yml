@@ -1,6 +1,9 @@
-# Conda environment for the PREFIRE_AUX_SAT bundle (conda-forge only). Checked on 2026-10-25: the solve
-# takes about 25 minutes. mpi4py stays out on purpose: nothing on the run path imports it, and with it
-# (and an MPI build of ESMF) the conda solver ran for 3 hours without an answer.
+# Conda environment for the PREFIRE_AUX_SAT bundle (conda-forge only), kept as the readable list of what the
+# code needs. For a fast, exact install use conda-linux-64.lock instead: it holds the 116 packages this file
+# solved to on 2026-10-25 (Linux x86-64), and `conda create -n prefire_aux_sat --file conda-linux-64.lock`
+# installs them in under a minute with no solve. Solving this file takes 22 to 41 minutes (three solves on
+# 2026-10-25). mpi4py stays out on purpose: nothing on the run path imports it, and with it (and an MPI build
+# of ESMF) the conda solver ran for 3 hours without an answer.
 name: prefire_aux_sat
 channels:
   - conda-forge
