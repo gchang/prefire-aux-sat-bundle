@@ -30,10 +30,10 @@ source bundle_env.sh    # from the bundle root; sets PYTHONPATH to the three sib
 Python 3.10 from conda-forge with the packages in `PREFIRE_AUX_SAT/README.md`, plus git (to record the code versions in the product). Two things matter when you build the environment:
 
 - **numpy must be below 2.** The code was written against numpy 1.26 (see `PREFIRE_AUX_SAT/conda_env.list`). With numpy 2 the final surface type step stops at `classify_sfc_type_final.py:297` (`OverflowError: Python integer -9999 out of bounds for int8`).
-- **Use the no-MPI build of ESMF and leave out mpi4py.** One orbit runs on one core and nothing on the run path imports mpi4py. The unpinned list with mpi4py kept the conda solver busy for about 3 hours without an answer. The list below solves; the `timeout` stops a stuck solve after 30 minutes.
+- **Use the no-MPI build of ESMF and leave out mpi4py.** One orbit runs on one core and nothing on the run path imports mpi4py. The unpinned list with mpi4py kept the conda solver busy for about 3 hours without an answer. The list below solves, though the solve itself took about 25 minutes on a 16-core Linux machine; the `timeout` stops a stuck solve after an hour.
 
 ```sh
-timeout 1800 conda create -y -n prefire_aux_sat -c conda-forge --override-channels \
+timeout 3600 conda create -y -n prefire_aux_sat -c conda-forge --override-channels \
     python=3.10 "numpy<2" netcdf4 scipy esmpy "esmf=*=nompi*" h5py pyhdf cartopy xarray
 conda activate prefire_aux_sat
 ```
@@ -102,7 +102,7 @@ cp run.sh my-run.sh
 ./my-run.sh
 ```
 
-The product is `PREFIRE_AUX_SAT/test/outputs/raw-PREFIRE_SAT1_AUX-SAT_R01_P00_20241007075724_01877.nc` (about 2.3 MB). `inputs`, `outputs` and `my-run.sh` are ignored or untracked in the submodule, so they do not mark the code as modified.
+The product is `PREFIRE_AUX_SAT/test/outputs/raw-PREFIRE_SAT1_AUX-SAT_R01_P00_20241007075724_01877.nc` (about 2.3 MB). `inputs` and `outputs` are ignored by the submodule's `.gitignore` and `my-run.sh` is untracked, so the code versions recorded in the product stay clean (`git status` in the bundle still lists `PREFIRE_AUX_SAT` as having untracked content).
 
 For another orbit or other folders, change four lines of `my-run.sh`: `input_dir`, `cfg_str1` (the frame range, a comma, then the AUX-MET path), `OUTPUT_DIR` and `TMP_DIR`. For example, instead of `cp run.sh my-run.sh`:
 
@@ -157,8 +157,10 @@ python PREFIRE_PRD_GEN/dist/produce_PRD.py
 
 ## Known issue: VIIRS satellite slots
 
-`calculate_VIIRS_L3_aux.py:66-67` finds the VIIRS file with the pattern `<IN_PRODS_DIR>/<product>/*.A<YYYYDDD>.*` and takes the first match, without checking the product name in the file name. With one subfolder per product, as above, each satellite reads its own file. With a flat folder, both slots can get the same satellite's file. The official R01 granules show the same mix-up: in the test orbit's official file both VIIRS slots hold NOAA-20 data and both carry the NOAA-20 DOI (`10.5067/DNC2SNXE6HJB`). A run with the layout above therefore differs from the official file in the SNPP slot, and through it in the snow data source and the final surface type for about 2% of footprints (snowy land). Putting the NOAA-20 file in `VNP10C1/` as well reproduces the official file.
+`calculate_VIIRS_L3_aux.py:66-67` finds the VIIRS file with the pattern `<IN_PRODS_DIR>/<product>/*.A<YYYYDDD>.*` and takes the first match, without checking the product name in the file name. With one subfolder per product, as above, each satellite reads its own file. With a flat folder, both slots can get the same satellite's file. The official R01 granules show the same mix-up: in the test orbit's official file both VIIRS slots hold NOAA-20 data and both carry the NOAA-20 DOI (`10.5067/DNC2SNXE6HJB`). A run with the layout above therefore differs from the official file in the SNPP slot, and through it in the snow data source and the final surface type for about 2% of footprints (snowy land). Putting the NOAA-20 file in `VNP10C1/` as well reproduces the official file exactly. The fix belongs in `calculate_VIIRS_L3_aux.py` (match `<product>.A<YYYYDDD>.*`); this bundle leaves the R01 code as released.
 
 ## Run time
 
-About 3 minutes per orbit on one core, peak memory about 8.5 GB. About 205 MB of input per orbit; the raw product is about 2.3 MB.
+About 3 to 5 minutes per orbit on one core (more cores do not help), peak memory 8.4 GB, almost all of it in the two VIIRS steps. Finalization takes about a second and 75 MB. About 205 MB of input per orbit; the raw product is about 2.3 MB and the final product about 2.2 MB.
+
+Checked on 2026-10-25 from a fresh `git clone --recurse-submodules`, with the environment above (numpy 1.26.4, esmf 8.9.1 nompi) and SAT1 orbit 01877, run with no network and a 14 GB memory limit. Both `run.sh` routes above (the test folders, and the `sed` edit with folders outside the clone) gave the same raw product in 4 to 5 minutes at 8.4 GB peak. After finalization, compared with the official ASDC R01 AUX-SAT granule: geometry, the AMSR2 and NISE fields, the sea ice data source, `VIIRS_L3_num_pts_total` and every NOAA-20 VIIRS field are identical, and `merged_surface_type_final` agrees for 51,927 of 52,880 footprints (98.2%). The rest, and the SNPP slot, differ only because of the satellite slot issue above: with the NOAA-20 file also in `VNP10C1/`, every variable in the final file is identical to the official granule, and the file differs only in its creation time, netCDF library version and code version hashes.
