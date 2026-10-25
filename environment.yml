@@ -1,0 +1,18 @@
+# Conda environment for the PREFIRE_AUX_SAT bundle (conda-forge only). Checked on 2026-10-25: the solve
+# takes about 25 minutes. mpi4py stays out on purpose: nothing on the run path imports it, and with it
+# (and an MPI build of ESMF) the conda solver ran for 3 hours without an answer.
+name: prefire_aux_sat
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy<2          # numpy 2 stops classify_sfc_type_final.py:297 (-9999 written into int8)
+  - netcdf4
+  - scipy
+  - esmpy
+  - esmf=*=nompi*    # the no-MPI ESMF build
+  - h5py
+  - pyhdf
+  - cartopy
+  - xarray
+  - git              # records the code versions in the product

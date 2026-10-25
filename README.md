@@ -30,11 +30,10 @@ source bundle_env.sh    # from the bundle root; sets PYTHONPATH to the three sib
 Python 3.10 from conda-forge with the packages in `PREFIRE_AUX_SAT/README.md`, plus git (to record the code versions in the product). Two things matter when you build the environment:
 
 - **numpy must be below 2.** The code was written against numpy 1.26 (see `PREFIRE_AUX_SAT/conda_env.list`). With numpy 2 the final surface type step stops at `classify_sfc_type_final.py:297` (`OverflowError: Python integer -9999 out of bounds for int8`).
-- **Use the no-MPI build of ESMF and leave out mpi4py.** One orbit runs on one core and nothing on the run path imports mpi4py. The unpinned list with mpi4py kept the conda solver busy for about 3 hours without an answer. The list below solves, though the solve itself took about 25 minutes on a 16-core Linux machine; the `timeout` stops a stuck solve after an hour.
+- **Use the no-MPI build of ESMF and leave out mpi4py.** One orbit runs on one core and nothing on the run path imports mpi4py. The unpinned list with mpi4py kept the conda solver busy for about 3 hours without an answer. `environment.yml` at the bundle root holds the list that solves (conda-forge only, with these pins). The solve itself takes 22 to 25 minutes on a 16-core Linux machine; the `timeout` stops a stuck solve after an hour.
 
 ```sh
-timeout 3600 conda create -y -n prefire_aux_sat -c conda-forge --override-channels \
-    python=3.10 "numpy<2" netcdf4 scipy esmpy "esmf=*=nompi*" h5py pyhdf cartopy xarray
+timeout 3600 conda env create -f environment.yml
 conda activate prefire_aux_sat
 ```
 
